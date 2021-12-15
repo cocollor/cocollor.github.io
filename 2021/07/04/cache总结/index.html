@@ -1,0 +1,465 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/favicon.png">
+  <link rel="icon" href="/img/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="cocollor">
+  <meta name="keywords" content="">
+  <meta name="description" content="现代体系结构上的unix系统第二章第二章主要对高速缓存系统进行了概述，看的受益很多，主要是在书上做了勾画，这里简单记一些要点。寄存器贵，内存慢，价格与速度均介于二者之间的缓存诞生了由于数据的局部性原理，缓存能够取得比较好的效果cache只是主存储器的一个子集，怎么表示存取了哪些，哪些被修改了主要靠标记(tagging)，平时说的cache line大小是数据大小，不包含标记大小。替换策略主要是LR">
+<meta property="og:type" content="article">
+<meta property="og:title" content="cache知识总结">
+<meta property="og:url" content="http://example.com/2021/07/04/cache%E6%80%BB%E7%BB%93/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="现代体系结构上的unix系统第二章第二章主要对高速缓存系统进行了概述，看的受益很多，主要是在书上做了勾画，这里简单记一些要点。寄存器贵，内存慢，价格与速度均介于二者之间的缓存诞生了由于数据的局部性原理，缓存能够取得比较好的效果cache只是主存储器的一个子集，怎么表示存取了哪些，哪些被修改了主要靠标记(tagging)，平时说的cache line大小是数据大小，不包含标记大小。替换策略主要是LR">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-07-04T08:13:26.000Z">
+<meta property="article:modified_time" content="2021-12-15T09:10:51.697Z">
+<meta property="article:author" content="cocollor">
+<meta property="article:tag" content="linux">
+<meta property="article:tag" content="cache">
+<meta name="twitter:card" content="summary_large_image">
+  
+  <title>cache知识总结 - Hexo</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10/styles/github-gist.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3/dist/jquery.fancybox.min.css" />
+  
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.8.12","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname"}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cocolor&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/default.png') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="cache知识总结">
+              
+                cache知识总结
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-07-04 16:13" pubdate>
+        2021年7月4日 下午
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      6.7k 字
+    </span>
+  
+
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      21 分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">cache知识总结</h1>
+            
+            <div class="markdown-body">
+              <h3 id="现代体系结构上的unix系统第二章"><a href="#现代体系结构上的unix系统第二章" class="headerlink" title="现代体系结构上的unix系统第二章"></a>现代体系结构上的unix系统第二章</h3><p>第二章主要对高速缓存系统进行了概述，看的受益很多，主要是在书上做了勾画，这里简单记一些要点。<br>寄存器贵，内存慢，价格与速度均介于二者之间的缓存诞生了<br>由于数据的局部性原理，缓存能够取得比较好的效果<br>cache只是主存储器的一个子集，怎么表示存取了哪些，哪些被修改了主要靠标记(tagging)，平时说的cache line大小是数据大小，不包含标记大小。<br>替换策略主要是LRU、随机替换之类的<br>写入策略分直通与写回。直通改了缓存的时候也改主存，写回改了缓存过一段时间再改主存<br>写回会有一致性问题，所以需要标记有没有更改，并且在一些操作前得刷新<br>直接映射，散列算法。<br>双路组相连，n 路组相连<br>基本上都支持无缓存的操作，cpu直接存取主存<br>现在x86基本上采用上一级缓存的内容不包含在下一层。arm分情况。</p>
+<h3 id="下面是网页知识总结："><a href="#下面是网页知识总结：" class="headerlink" title="下面是网页知识总结："></a>下面是网页知识总结：</h3><p><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/102293437">链接</a></p>
+<h3 id="基本原理"><a href="#基本原理" class="headerlink" title="基本原理"></a>基本原理</h3><h4 id="多级cache存储结构"><a href="#多级cache存储结构" class="headerlink" title="多级cache存储结构"></a>多级cache存储结构</h4><p>当cache中没有缓存我们想要的数据的时候，依然需要漫长的等待从主存中load数据。为了进一步提升性能，引入多级cache。等级越高，速度越慢，容量越大。但是速度相比较主存而言，依然很快。不同等级cache速度之间关系如下：</p>
+<p>Cortex-A53架构上各级cache之间的硬件抽象框图如下：</p>
+<p>在Cortex-A53架构上，L1 cache分为单独的instruction cache（ICache）和data cache（DCache）。L1 cache是CPU私有的，每个CPU都有一个L1 cache。一个cluster 内的所有CPU共享一个L2 cache，L2 cache不区分指令和数据，都可以缓存。所有cluster之间共享L3 cache。L3 cache通过总线和主存相连。<br>inclusive与exclusive<br>下图略过L3</p>
+<p>CPU要访问的数据在cache中有缓存，称为“命中” (hit)，反之则称为“缺失” (miss)。<br>当CPU试图从某地址load数据时，首先从L1 cache中查询是否命中，如果命中则把数据返回给CPU。如果L1 cache缺失，则继续从L2 cache中查找。当L2 cache命中时，数据会返回给L1 cache以及CPU。如果L2 cache也缺失，很不幸，我们需要从主存中load数据，将数据返回给L2 cache、L1 cache及CPU。这种多级cache的工作方式称之为inclusive cache。某一地址的数据可能存在多级缓存中。与inclusive cache对应的是exclusive cache，这种cache保证某一地址的数据缓存只会存在于多级cache其中一级。也就是说，任意地址的数据不可能同时在L1和L2 cache中缓存。</p>
+<h4 id="直接映射缓存"><a href="#直接映射缓存" class="headerlink" title="直接映射缓存"></a>直接映射缓存</h4><p>cache的大小称之为cahe size，代表cache可以缓存最大数据的大小。我们将cache平均分成相等的很多块，每一个块大小称之为cache line，其大小是cache line size。例如一个64 Bytes大小的cache。如果我们将64 Bytes平均分成64块，那么cache line就是1字节，总共64行cache line。<br>cache line是cache和主存之间数据传输的最小单位。如果cache缺失，那么cache控制器会从主存中一次性的load cache line大小的数据到cache中。<br>怎么判断想要的数据我们有没有存，我们要把要访问的地址存取下来，按照散列找到cache中的对应位置，再检查地址到底匹不匹配，如果匹配就说明就是它。<br>两路组相连，n路组相连，全相连缓存<br>注意更新策略即可。</p>
+<h4 id="更新"><a href="#更新" class="headerlink" title="更新"></a>更新</h4><p>写直通与写回</p>
+<h4 id="cache组织方式"><a href="#cache组织方式" class="headerlink" title="cache组织方式"></a>cache组织方式</h4><p>我们都知道cache控制器根据地址查找判断是否命中，这里的地址究竟是虚拟地址(virtual address，VA)还是物理地址(physical address，PA)？我们应该清楚CPU发出对某个地址的数据访问，这个地址其实是虚拟地址，虚拟地址经过MMU转换成物理地址，最终从这个物理地址读取数据。因此cache的硬件设计既可以采用虚拟地址也可以采用物理地址甚至是取两者地址部分组合作为查找cache的依据。</p>
+<h4 id="虚拟高速缓存（VIVT）"><a href="#虚拟高速缓存（VIVT）" class="headerlink" title="虚拟高速缓存（VIVT）"></a>虚拟高速缓存（VIVT）</h4><p>虚拟地址直接送到cache控制器，如果cache hit。直接从cache中返回数据给CPU。如果cache miss，则把虚拟地址发往MMU，经过MMU转换成物理地址，根据物理地址从主存(main memory)读取数据。由于我们根据虚拟地址查找高速缓存，所以我们是用虚拟地址中部分位域作为索引(index)，找到对应的的cacheline。然后根据虚拟地址中部分位域作为标记(tag)来判断cache是否命中。因此，我们针对这种index和tag都取自虚拟地址的高速缓存称为虚拟高速缓存，简称VIVT(Virtually Indexed Virtually Tagged)。另外，我们复习下cache控制器查找数据以及判断是否命中的规则：通过index查找对应的cacheline，通过tag判断是否命中cache。 虚拟高速缓存的优点是不需要每次读取或者写入操作的时候把虚拟地址经过MMU转换为物理地址，这在一定的程度上提升了访问cache的速度，毕竟MMU转换虚拟地址需要时间。同时硬件设计也更加简单。但是，正是使用了虚拟地址作为tag，所以引入很多软件使用上的问题。 操作系统在管理高速缓存正确工作的过程中，主要会面临两个问题。歧义(ambiguity)和别名(alias)。为了保证系统的正确工作，操作系统负责避免出现歧义和别名。</p>
+<h5 id="歧义-ambiguity"><a href="#歧义-ambiguity" class="headerlink" title="歧义(ambiguity)"></a>歧义(ambiguity)</h5><p>简单来说就是不同进程有相同的虚拟地址，处理方法就是切换进程的时候刷新缓存，代价大<br>歧义是指不同的数据在cache中具有相同的tag和index。cache控制器判断是否命中cache的依据就是tag和index，因此这种情况下，cache控制器根本没办法区分不同的数据。这就产生了歧义。什么情况下发生歧义呢？我们知道不同的物理地址存储不同的数据，只要相同的虚拟地址映射不同的物理地址就会出现歧义。例如两个互不相干的进程，就可能出现相同的虚拟地址映射不同的物理地址。假设A进程虚拟地址0x4000映射物理地址0x2000。B进程虚拟地址0x4000映射物理地址0x3000。当A进程运行时，访问0x4000地址会将物理地址0x2000的数据加载到cacheline中。当A进程切换到B进程的时候，B进程访问0x4000会怎样？当然是会cache hit，此时B进程就访问了错误的数据，B进程本来想得到物理地址0x3000对应的数据，但是却由于cache hit得到了物理地址0x2000的数据。操作系统如何避免歧义的发生呢？当我们切换进程的时候，可以选择flush所有的cache。flush cache操作有两种： - 使主存储器有效。针对write back高速缓存，首先应该使主存储器有效，保证已经修改数据的cacheline写回主存储器，避免修改的数据丢失。 - 使高速缓存无效。保证切换后的进程不会错误的命中上一个进程的缓存数据。<br>因此，切换后的进程刚开始执行的时候，将会由于大量的cache miss导致性能损失。所以，VIVT高速缓存明显的缺点之一就是经常需要flush cache以保证歧义不会发生，最终导致性能的损失。VIVT高速缓存除了面对歧义问题外，还面临另一个问题：别名(alias)。</p>
+<h5 id="别名-alias"><a href="#别名-alias" class="headerlink" title="别名(alias)"></a>别名(alias)</h5><p>简单来说就是不同的虚拟地址可以映射向相同的物理地址，那写回的时候就会面临两个也许不同的写回<br>当不同的虚拟地址映射相同的物理地址，而这些虚拟地址的index不同，此时就发生了别名现象(多个虚拟地址被称为别名)。通俗点来说就是指同一个物理地址的数据被加载到不同的cacheline中就会出现别名现象。 考虑这样的一个例子。虚拟地址0x2000和0x4000都映射到相同的物理地址0x8000。这意味着进程既可以从0x2000读取数据，也能从地址0x4000读取数据。假设系统使用的是直接映射VIVT高速缓存，cache更新策略采用写回机制，并且使用虚拟地址的位&lt;15…4&gt;作为index。那么虚拟地址0x2000和虚拟地址0x4000的index分别是0x200和0x400。这意味同一个物理地址的数据会加载到不同的cacheline。假设物理地址0x8000存储的数据是0x1234。程序先访问0x2000把数据0x1234加载到第0x200(index)行cacheline中。接着访问0x4000，会将0x1234再一次的加载到第0x400(index)行cacheline中。现在程序将0x2000地址数据修改成0x5678。由于采用的是写回策略，因此修改的数据依然躺在cacheline中。当程序访问0x4000的时候由于cache hit导致读取到旧的数据0x1234。这就造成了数据不一致现象，这不是我们想要的结果。可以选择下面的方法避免这个问题：那就是针对共享数据采用nocache，或者采用其他方法。</p>
+<h4 id="物理高速缓存-PIPT"><a href="#物理高速缓存-PIPT" class="headerlink" title="物理高速缓存(PIPT)"></a>物理高速缓存(PIPT)</h4><p>基于对VIVT高速缓存的认识，我们知道VIVT高速缓存存在歧义和名别两大问题。主要问题原因是：tag取自虚拟地址导致歧义，index取自虚拟地址导致别名。所以，如果想让操作系统少操心，最简单的方法是tag和index都取自物理地址。物理的地址tag部分是独一无二的，因此肯定不会导致歧义。而针对同一个物理地址，index也是唯一的，因此加载到cache中也是唯一的cacheline，所以也不会存在别名。我们称这种cache为物理高速缓存，简称PIPT(Physically Indexed Physically Tagged)。PIPT工作原理如下图所示。</p>
+<p>CPU发出的虚拟地址经过MMU转换成物理地址，物理地址发往cache控制器查找确认是否命中cache。虽然PIPT方式在软件层面基本不需要维护，但是硬件设计上比VIVT复杂很多。因此硬件成本也更高。同时，由于虚拟地址每次都要翻译成物理地址，因此在查找性能上没有VIVT方式简洁高效，毕竟PIPT方式需要等待虚拟地址转换物理地址完成后才能去查找cache。顺便提一下，为了加快MMU翻译虚拟地址的速度，硬件上也会加入一块cache，作用是缓存虚拟地址和物理地址的映射关系，这块cache称之为TLB(Translation Lookaside Buffer)。当MMU需要转换虚拟地址时，首先从TLB中查找，如果cache hit，则直接返回物理地址。如果cache miss则需要MMU查找页表。这样就加快了虚拟地址转换物理地址的速度。如果系统采用的PIPT的cache，那么软件层面基本不需要任何的维护就可以避免歧义和别名问题。这是PIPT最大的优点。现在的CPU很多都是采用PIPT高速缓存设计。在Linux内核中，可以看到针对PIPT高速缓存的管理函数都是空函数，无需任何的管理。</p>
+<h4 id="物理标记的虚拟高速缓存-VIPT"><a href="#物理标记的虚拟高速缓存-VIPT" class="headerlink" title="物理标记的虚拟高速缓存(VIPT)"></a>物理标记的虚拟高速缓存(VIPT)</h4><p>为了提升cache查找性能，我们不想等到虚拟地址转换物理地址完成后才能查找cache。因此，我们可以使用虚拟地址对应的index位查找cache，与此同时(硬件上同时进行)将虚拟地址发到MMU转换成物理地址。当MMU转换完成，同时cache控制器也查找完成，此时比较cacheline对应的tag和物理地址tag域，以此判断是否命中cache。我们称这种高速缓存为VIPT(Virtually Indexed Physically Tagged)。</p>
+<p>VIPT以物理地址部分位作为tag，因此我们不会存在歧义问题。但是，采用虚拟地址作为index，所以可能依然存在别名问题。是否存在别名问题，需要考虑cache的结构，我们需要分情况考虑。</p>
+<h5 id="VIPT-Cache为什么不存在歧义"><a href="#VIPT-Cache为什么不存在歧义" class="headerlink" title="VIPT Cache为什么不存在歧义"></a>VIPT Cache为什么不存在歧义</h5><p>在这里重点介绍下为什么VIPT Cache不存在歧义。假设以32位CPU为例，页表映射最小单位是4KB。我们假设虚拟地址&lt;12:4&gt;位(这是一个有别名问题的VIPT Cache)作为index，于此同时将虚拟地址&lt;31:12&gt;发送到MMU转换得到物理地址的&lt;31:12&gt;，这里我们把&lt;31:12&gt;作为tag，并不是&lt;31:13&gt;。这地方很关键，也就是说VIPT的tag取决于物理页大小的剩余位数，而不是去掉index和offset的剩余位数。物理tag是惟一的，所以不存在歧义。</p>
+<h5 id="VIPT-Cache什么情况不存在别名"><a href="#VIPT-Cache什么情况不存在别名" class="headerlink" title="VIPT Cache什么情况不存在别名"></a>VIPT Cache什么情况不存在别名</h5><p>我们知道VIPT的优点是查找cache和MMU转换虚拟地址同时进行，所以性能上有所提升。歧义问题虽然不存在了，但是别名问题依旧可能存在，那么什么情况下别名问题不会存在呢？Linux系统中映射最小的单位是页，一页大小是4KB。那么意味着虚拟地址和其映射的物理地址的位&lt;11…0&gt;是一样的。针对直接映射高速缓存，如果cache的size小于等于4KB，是否就意味着无论使用虚拟地址还是物理地址的低位查找cache结果都是一样呢？是的，因为虚拟地址和物理地址对应的index是一样的。这种情况，VIPT实际上相当于PIPT，软件维护上和PIPT一样。如果示例是一个四路组相连高速缓存呢？只要满足一路的cache的大小小于等于4KB，那么也不会出现别名问题。</p>
+<h5 id="VIPT-Cache的别名问题"><a href="#VIPT-Cache的别名问题" class="headerlink" title="VIPT Cache的别名问题"></a>VIPT Cache的别名问题</h5><p>假设系统使用的是直接映射高速缓存，cache大小是8KB，cacheline大小是256字节。这种情况下的VIPT就存在别名问题。因为index来自虚拟地址位&lt;12…8&gt;，虚拟地址和物理地址的位&lt;11…8&gt;是一样的，但是bit12却不一定相等。 假设虚拟地址0x0000和虚拟地址0x1000都映射相同的物理地址0x4000。那么程序读取0x0000时，系统将会从物理地址0x4000的数据加载到第0x00行cacheline。然后程序读取0x1000数据，再次把物理地址0x4000的数据加载到第0x10行cacheline。这不，别名出现了。相同物理地址的数据被加载到不同cacheline中。</p>
+<h5 id="如何解决VIPT-Cache别名问题"><a href="#如何解决VIPT-Cache别名问题" class="headerlink" title="如何解决VIPT Cache别名问题"></a>如何解决VIPT Cache别名问题</h5><p>我们接着上面的例子说明。首先出现问题的场景是共享映射，也就是多个虚拟地址映射同一个物理地址才可能出现问题。我们需要想办法避免相同的物理地址数据加载到不同的cacheline中。如何做到呢？那我们就避免上个例子中0x1000映射0x4000的情况发生。我们可以将虚拟地址0x2000映射到物理地址0x4000，而不是用虚拟地址0x1000。0x2000对应第0x00行cacheline，这样就避免了别名现象出现。因此，在建立共享映射的时候，返回的虚拟地址都是按照cache大小对齐的地址，这样就没问题了。如果是多路组相连高速缓存的话，返回的虚拟地址必须是满足一路cache大小对齐。在Linux的实现中，就是通过这种方法解决别名问题。</p>
+<h5 id="不存在的PIVT高速缓存"><a href="#不存在的PIVT高速缓存" class="headerlink" title="不存在的PIVT高速缓存"></a>不存在的PIVT高速缓存</h5><p>按照排列组合来说，应该还存在一种PIVT方式的高速缓存。因为PIVT没有任何优点，却包含以上的所有缺点。你想想，PIVT方式首先要通过MMU转换成物理地址，然后才能根据物理地址index域查找cache。这在速度上没有任何优势，而且还存在歧义和别名问题。请忘记它吧。不，应该不算是忘记，因为它从来就没出现过。</p>
+<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><p>VIVT Cache问题太多，软件维护成本过高，是最难管理的高速缓存。所以现在基本只存在历史的文章中。现在我们基本看不到硬件还在使用这种方式的cache。现在使用的方式是PIPT或者VIPT。如果多路组相连高速缓存的一路的大小小于等于4KB，一般硬件采用VIPT方式，因为这样相当于PIPT，岂不美哉。当然，如果一路大小大于4KB，一般采用PIPT方式，也不排除VIPT方式，这就需要操作系统多操点心了。</p>
+<h3 id="NUMA"><a href="#NUMA" class="headerlink" title="NUMA"></a>NUMA</h3><p>非一致性内存访问，就是有的内存和cpu采用高速通道相连，访问与其他cpu相连的内存时走的bus比较慢，这样访问速度就不一致。为啥不都访问一块内存，因为繁忙，用时反而高。<br>对不同内存访问速度不一致，所以就可以调整CPU将数据存在哪里，设置亲和性。不同的业务对数据的分布要求不一致，比如一个业务大家都要访问，那放在一个cpu旁的内存里就不合适。但是只有一个程序访问的时候就放在一个cpu那里好了。<br>详情<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/336365600">参考文章</a></p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/categories/%E6%9C%8D%E5%8A%A1%E5%99%A8/">服务器</a>
+                    
+                      <a class="hover-with-bg" href="/categories/%E6%9C%8D%E5%8A%A1%E5%99%A8/cache/">cache</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/linux/">linux</a>
+                    
+                      <a class="hover-with-bg" href="/tags/cache/">cache</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2021/08/01/openssl/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">openssl</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/07/03/arm%E6%B5%81%E6%B0%B4%E7%BA%BF/">
+                        <span class="hidden-mobile">arm流水线</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Hexo with Fluid</span></a> <i class="iconfont icon-love"></i> <a href="https://cocollor.github.io/about/" target="_blank" rel="nofollow noopener"><span>cocollor</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  
+    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4/dist/tocbot.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3/dist/jquery.fancybox.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4/anchor.min.js" ></script>
+  
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2/dist/clipboard.min.js" ></script>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>

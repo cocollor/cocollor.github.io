@@ -1,0 +1,451 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/favicon.png">
+  <link rel="icon" href="/img/favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="cocollor">
+  <meta name="keywords" content="">
+  <meta name="description" content="处理器性能共公式性能&#x3D;程序&#x2F;时间&#x3D;程序&#x2F;指令 * 指令&#x2F;周期数 * 周期&#x2F;时间第一部分是指令数量（指令集、编译器、操作系统），第二部分每条指令的周期数也叫CPI（指令集），第三条每个周期的时间（硬件时间的复杂性、cpu频率） 减少时钟周期-流水线技术深度流水线使得每个流水段延时（时钟周期）减少。感觉这里的时钟周期不是真的时钟周期，只是流水线达到的效果但是一旦分支预测出错，将会开销更大。基本操作不应">
+<meta property="og:type" content="article">
+<meta property="og:title" content="流水线基础">
+<meta property="og:url" content="http://example.com/2021/07/01/%E6%B5%81%E6%B0%B4%E7%BA%BF%E5%9F%BA%E7%A1%80/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="处理器性能共公式性能&#x3D;程序&#x2F;时间&#x3D;程序&#x2F;指令 * 指令&#x2F;周期数 * 周期&#x2F;时间第一部分是指令数量（指令集、编译器、操作系统），第二部分每条指令的周期数也叫CPI（指令集），第三条每个周期的时间（硬件时间的复杂性、cpu频率） 减少时钟周期-流水线技术深度流水线使得每个流水段延时（时钟周期）减少。感觉这里的时钟周期不是真的时钟周期，只是流水线达到的效果但是一旦分支预测出错，将会开销更大。基本操作不应">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-07-01T08:13:26.000Z">
+<meta property="article:modified_time" content="2021-12-15T09:02:13.883Z">
+<meta property="article:author" content="cocollor">
+<meta property="article:tag" content="linux">
+<meta property="article:tag" content="流水线">
+<meta name="twitter:card" content="summary_large_image">
+  
+  <title>流水线基础 - Hexo</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10/styles/github-gist.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3/dist/jquery.fancybox.min.css" />
+  
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.8.12","typing":{"enable":false,"typeSpeed":70,"cursorChar":"_","loop":false},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname"}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Cocolor&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/default.png') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="流水线基础">
+              
+                流水线基础
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2021-07-01 16:13" pubdate>
+        2021年7月1日 下午
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2k 字
+    </span>
+  
+
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      6 分钟
+    </span>
+  
+
+  
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">流水线基础</h1>
+            
+            <div class="markdown-body">
+              <h3 id="处理器性能共公式"><a href="#处理器性能共公式" class="headerlink" title="处理器性能共公式"></a>处理器性能共公式</h3><p>性能=程序/时间=程序/指令 * 指令/周期数 * 周期/时间<br>第一部分是指令数量（指令集、编译器、操作系统），第二部分每条指令的周期数也叫CPI（指令集），第三条每个周期的时间（硬件时间的复杂性、cpu频率）</p>
+<p>减少时钟周期-流水线技术<br>深度流水线使得每个流水段延时（时钟周期）减少。感觉这里的时钟周期不是真的时钟周期，只是流水线达到的效果<br>但是一旦分支预测出错，将会开销更大。<br>基本操作不应需要太多周期，比如ALU单元<br>cpi目标是达到1甚至小于1，其倒数ipc大于1，现在超流水线性能很强，用大于1的IPC方便</p>
+<h3 id="标量超标量"><a href="#标量超标量" class="headerlink" title="标量超标量"></a>标量超标量</h3><p>标量处理器：每个时钟周期最多取出一条指令发射。<br>超标量：多条<br>并行处理器性能<br>为了在超标量设计中获得很高的ipc，流水线需要很宽<br>流水线深可以提高频率。<br>不能又宽又深</p>
+<p>标量一个处理器执行计算<br>向量：多个</p>
+<p>当N很大时，E接近1-h。继续提升N会造成属于向量计算时间趋近于0（向量内容很快完成），所以标量时间就影响很大。</p>
+<p>标量部分并非必须顺序执行，并行一点处理也有很大提升。<br>指令级并行ILP,并行度极限典型的小于2，后来理论上可以比较大，但是实际上只是有一定提升</p>
+<h3 id="超标量与超流水"><a href="#超标量与超流水" class="headerlink" title="超标量与超流水"></a>超标量与超流水</h3><p>超流水线相对于基准标量流水线具有更高的流水度。IL（发射延迟）更小了。发射速度比执行速度还快。MP=m<em>k 超流水应该是将一个动作拆分为m个执行小步骤。<br>超标量是能够同时发射多条指令，宽度n更大。MP(能够执行的最大指令数)等于n</em>k.<br>m=n时，二者效果一致<br>可以两者同时用，m<em>n</em>k<br>高时钟速度下存储器延迟比CPU慢三个数量级以上，需要想办法扩展存储器带宽。挑战由数据操作变为数据移动<br>流水线处理器</p>
+<p>流水化将系统分为很多段，每个段之间加缓冲，缓冲的作用应该是为了防止时钟紊乱。流水线不呢无限制加，一个原因是深了寄存器数量多，价格高<br>价格性能比模型曲线是个对勾函数，有最低点。左右分别是“不够完全流水化”“过度流水化”<br>流水线理想假设<br>一致的运算分量 每个阶段的延迟不一定一致，但是我们按照最长的等待会造成内部碎片<br>重复的运算 多功能流水线会造成一部分数据不需要全部的流水段，造成外部碎片<br>独立的运算 有的时候会流水线停顿，一个结果能带另一个结果的出现，被迫停顿会造成外部碎片的效果<br>指令流水线<br>为了减少内部碎片，可以把几个步骤中时间较短的合成一个子运算，尽量一致。<br>指令流水线天然多功能，应该支持所有指令运算同时减少无效、空闲的机器周期<br>指令流水线一般相关，会造成停顿，应该尽量减少流水线停顿<br>指令集对这三条也有对应的影响<br>均衡流水线的方法：延迟多的拆成多个分量，少的多个合一起。</p>
+<p>arm指令变长？<br>32位定长，MIPS也是32位定长<br>与86对比流程图</p>
+<h3 id="MS-ROM"><a href="#MS-ROM" class="headerlink" title="MS ROM"></a>MS ROM</h3><p>在X86指令中，有一些连复杂解码器都认为复杂的指令。这些指令会被翻译成超过4条uops，它们是从microcode sequencer(MS) ROM 绕道译码的。此时，MSROM每周期会发射超过4条指令，直到microcode sequencer完成了工作。在此期间，译码器停止工作。对于更复杂的指令译码可能会产生问题，可以通过微代码修改译码规则，并没有焊死。</p>
+<h3 id="Stack-Engine"><a href="#Stack-Engine" class="headerlink" title="Stack Engine"></a>Stack Engine</h3><p>x86有这一个专门的stack machine 操作。像push，pop和call，ret这样的指令，是工作在stack pointer（ESP）上的。<br>像push这样的指令翻译成store指令和将ESP-4的指令。此时的减法操作将会被Stack Engine完成。Stack Engine位于decoders的后面，监视uOps指令流。Stack Engine 将会抓住输入的更新栈寄存器的操作。这可以更新栈指针的uops造成的流水线的负担。换句话说，这相对于将这些操作放入流水线并通过执行单元计算，更加简单更加快速。</p>
+<h3 id="DSB"><a href="#DSB" class="headerlink" title="DSB"></a>DSB</h3><p>这里这个<a target="_blank" rel="noopener" href="https://blog.csdn.net/hit_shaoqi/article/details/106751490">uop</a> 和<a target="_blank" rel="noopener" href="https://blog.csdn.net/Hipercomer/article/details/38390375">trace cache</a>比较像，比较两个链接可以发现都是一个缓存微指令的地方，省的分支预测错误导致的再一次指令译码。</p>
+<h3 id="ROB"><a href="#ROB" class="headerlink" title="ROB"></a>ROB</h3><p>里面的Retirement与ARM的commit很像<br>Scheduler<br>像是dispatch、issue的结合体。<br>整体结构还可以参考<a target="_blank" rel="noopener" href="https://www.cnblogs.com/TaigaCon/p/7678394.html">这篇文章</a></p>
+<h3 id="分支预测差别"><a href="#分支预测差别" class="headerlink" title="分支预测差别"></a>分支预测差别</h3><p>ARM的处理器有个特点，就是乱序执行能力不如X86。换句话说，就是用户在使用电脑的时候，他的操作是随机的，无法预测的，造成了指令也无法预测。X86为了增强对这种情况下的处理能力，加强了乱序指令的执行。此外，X86还增强了单核的多线程能力。这样做的缺点就是，无法很有效的关闭和恢复处理器子模块，因为一旦关闭，恢复起来就很慢，从而造成低性能。为了保持高性能，就不得不让大部分的模块都保持开启，并且时钟也保持切换。这样做的直接后果就是耗电高。而ARM的指令强在确定次序的执行，并且依靠多核而不是单核多线程来执行。这样容易保持子模块和时钟信号的关闭，显然就更省电。</p>
+<p>N1架构 ARM官网 V apple<br>分支预测细节<br>csapp实验题</p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/categories/%E6%9C%8D%E5%8A%A1%E5%99%A8/">服务器</a>
+                    
+                      <a class="hover-with-bg" href="/categories/%E6%9C%8D%E5%8A%A1%E5%99%A8/%E6%B5%81%E6%B0%B4%E7%BA%BF/">流水线</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/linux/">linux</a>
+                    
+                      <a class="hover-with-bg" href="/tags/%E6%B5%81%E6%B0%B4%E7%BA%BF/">流水线</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2021/07/02/x86%E6%B5%81%E6%B0%B4%E7%BA%BF/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">x86流水线</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Hexo with Fluid</span></a> <i class="iconfont icon-love"></i> <a href="https://cocollor.github.io/about/" target="_blank" rel="nofollow noopener"><span>cocollor</span></a> 
+  </div>
+  
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  
+    <script  src="https://cdn.jsdelivr.net/npm/tocbot@4/dist/tocbot.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3/dist/jquery.fancybox.min.js" ></script>
+  
+  
+    <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4/anchor.min.js" ></script>
+  
+  
+    <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2/dist/clipboard.min.js" ></script>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>
