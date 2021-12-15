@@ -210,5 +210,32 @@
   
   
   
+  <entry>
+    <title>hexo快速搭建自己的博客</title>
+    <link href="/2021/06/01/Hexo/"/>
+    <url>/2021/06/01/Hexo/</url>
+    
+    <content type="html"><![CDATA[<div class="note note-success">            <p>参考链接：</p><ul><li><p><a href="https://hexo.io/zh-cn/docs/">hexo官方文档</a></p></li><li><p><a href="https://hexo.fluid-dev.com/docs">fluid主题使用</a></p></li></ul>          </div><p>按照操作文档一步步来就ok啦！</p>]]></content>
+    
+    
+    <categories>
+      
+      <category>tool</category>
+      
+    </categories>
+    
+    
+    <tags>
+      
+      <tag>tool</tag>
+      
+      <tag>hexo</tag>
+      
+    </tags>
+    
+  </entry>
+  
+  
+  
   
 </search>
